@@ -4,11 +4,14 @@
 FROM rust as builder
 WORKDIR /usr/src/pronto
 RUN mkdir src && \
-    echo "fn main() {}" > src/main.rs
+    echo "fn main() { println!(\"empty build\"); }" > src/main.rs
 COPY ./Cargo.lock ./
 COPY ./Cargo.toml ./
 RUN cargo build --release && \
-    rm -rf src
+    rm -rf src && \
+    rm -rf target/release/.fingerprint/pronto-* && \
+    rm -rf target/release/deps/pronto-* && \
+    rm -rf target/release/pronto*
 COPY ./migrations ./migrations
 COPY ./src ./src
 COPY ./diesel.toml ./
