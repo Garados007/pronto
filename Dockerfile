@@ -39,6 +39,7 @@ RUN yq . ./open-api-v1.yml > ./open-api-v1.json && \
 # Create final runtime container
 
 FROM debian
+WORKDIR /app
 RUN apt-get update && \
     apt-get install -y openssl libpq-dev && \
     rm -rf /var/lib/apt/lists/*
@@ -46,7 +47,6 @@ COPY --from=builder /usr/src/pronto/target/release/pronto /usr/local/bin/pronto
 COPY --from=converter /app/index.html /app/doc.html
 COPY ./open-api-v1.yml ./
 COPY --from=converter /app/open-api-v1.json ./
-WORKDIR /app
 
 EXPOSE 5000
 CMD [ "pronto" ]
