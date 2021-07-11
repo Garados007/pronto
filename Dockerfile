@@ -44,8 +44,9 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 COPY --from=builder /usr/src/pronto/target/release/pronto /usr/local/bin/pronto
 COPY --from=converter /app/index.html /app/doc.html
-WORKDIR /app
 COPY ./open-api-v1.yml ./
+COPY --from=converter ./open-api-v1.json ./
+WORKDIR /app
 
 EXPOSE 5000
 CMD [ "pronto" ]

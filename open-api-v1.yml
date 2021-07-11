@@ -2,6 +2,13 @@ openapi: '3.0.2'
 info:
   title: Pronto REST Api
   version: '1.0'
+  description: |
+    Open Api Specification for Pronto.
+
+    ## Links:
+    [Live Server](https://pronto.2complex.de/) \
+    [Specification as JSON](https://pronto.2complex.de/v1.json) \
+    [Specification as YAML](https://pronto.2complex.de/v1.yml)
 servers:
   - url: https://pronto.2complex.de/v1
 components:

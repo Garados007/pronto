@@ -40,19 +40,40 @@ async fn index() -> actix_web::Result<NamedFile> {
         })
         .set_content_type(mime::TEXT_HTML_UTF_8)
     )
-    // HttpResponse::Ok()
-    // HttpResponse::Ok().json(
-    //     GameServerInfo {
-    //         name: "test server".to_string(),
-    //         uri: "http://test".to_string(),
-    //         developer: false,
-    //         fallback: false,
-    //         full: false,
-    //         maintenance: false,
-    //         max_clients: Some(17),
-    //         games: vec![],
-    //     }
-    // )
+}
+
+#[get("/v1.yml")]
+async fn index_yml() -> actix_web::Result<NamedFile> {
+    // let file = NamedFile::open("./open-api-v1.yml")
+    let file = NamedFile::open("./open-api-v1.yml")
+        .map_err(|x| {
+            warn!("{}", x);
+            actix_web::error::ErrorNotImplemented(x)
+        });
+    file.map(|x|
+        x.set_content_disposition(actix_web::http::header::ContentDisposition {
+            disposition: actix_web::http::header::DispositionType::Inline,
+            parameters: vec![],
+        })
+        .set_content_type(mime::TEXT_PLAIN_UTF_8)
+    )
+}
+
+#[get("/v1.json")]
+async fn index_json() -> actix_web::Result<NamedFile> {
+    // let file = NamedFile::open("./open-api-v1.yml")
+    let file = NamedFile::open("./open-api-v1.json")
+        .map_err(|x| {
+            warn!("{}", x);
+            actix_web::error::ErrorNotImplemented(x)
+        });
+    file.map(|x|
+        x.set_content_disposition(actix_web::http::header::ContentDisposition {
+            disposition: actix_web::http::header::DispositionType::Inline,
+            parameters: vec![],
+        })
+        .set_content_type(mime::APPLICATION_JSON)
+    )
 }
 
 #[post("/v1/update")]
@@ -228,6 +249,8 @@ async fn new_post(request: web::Json<NewRequest>) -> impl Responder {
 pub fn init_routes(cfg: &mut web::ServiceConfig) {
     cfg.service(redirect);
     cfg.service(index);
+    cfg.service(index_yml);
+    cfg.service(index_json);
     cfg.service(update);
     cfg.service(list);
     cfg.service(info);
