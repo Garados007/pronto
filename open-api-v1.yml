@@ -1,0 +1,286 @@
+openapi: '3.0.2'
+info:
+  title: Pronto REST Api
+  version: '1.0'
+servers:
+  - url: https://pronto.2complex.de/v1
+components:
+  responses:
+    ClientNewSuccess:
+      description: Server found
+      content: 
+        "application/json":
+          schema:
+            type: object
+            properties:
+              id:
+                type: string
+                description: Game server id
+                example: id-for-game-server
+              api-uri:
+                type: string
+                description: Url prefix for the pronto api
+                example: https://game1.example.com/api/v1/
+              game-uri:
+                type: string
+                description: Url prefix for the game
+                example: https://game1.example.com/game-name/api/v1/
+            required:
+              - id
+              - api-uri
+              - game-uri
+  schemas:
+    ServerInfo:
+      type: object
+      properties:
+        name:
+          type: string
+          description: game server name
+          example: game server name
+        uri:
+          type: string
+          description: public url prefix to the api
+          example: https://game1.example.com/api/v1/
+        developer:
+          type: boolean
+          description: true if this only for delevoper
+          default: false
+        fallback:
+          type: boolean
+          description: |
+            this server is meant to be a fallback if other servers are
+            full.
+          default: false
+        full:
+          type: boolean
+          description: |
+            true if the server is full. No new rooms will be sent to here.
+          default: false
+        maintenance:
+          type: boolean
+          description: |
+            true if the server will be restarted very soon for maintenance.
+            No new games will be sent here.
+          default: false
+        max-clients:
+          type: integer
+          nullable: true
+          minimum: 0
+        games:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                description: unique id for the game type.
+                example: unique-game-type-id
+              uri:
+                type: string
+                description: |
+                  the url prefix for the game related stuff.
+                  For some games this is only the server name without any protocol.
+                example: https://game1.example.com/game-name/api/v1/
+              rooms:
+                type: integer
+                minimum: 0
+                description: number of active rooms
+              max-rooms:
+                type: integer
+                minimum: 0
+                description: maximum number of active rooms
+                nullable: true
+              clients:
+                type: integer
+                minimum: 0
+                description: number of active clients
+            required:
+              - name
+              - uri
+              - rooms
+              - clients
+      required:
+        - name
+        - uri
+        - games
+    ServerInfoEx:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The internal id for this server
+          example: id-for-game-server
+        last-seen:
+          type: string
+          description: "the ISO8601 date of the last update"
+          example: "2020-10-30T15:35:49"
+        last-seen-sec:
+          type: number
+          description: seconds since last update
+          example: 3.14
+        info:
+          "$ref": '#/components/schemas/ServerInfo'
+paths:
+  "/update":
+    post:
+      tags:
+        - Server
+      description: |
+        Update the game server entry of a single servers
+      parameters:
+        - name: token
+          description: The authentification token of the game server
+          in: header
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              "$ref": '#/components/schemas/ServerInfo'
+      responses:
+        200:
+          description: Update successful
+          content:
+            "application/json":
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: |
+                      The internal id for this server
+                    example: "id-for-game-server"
+        403:
+          description: Invalid or missing token
+  "/list":
+    get:
+      tags:
+        - Info
+      parameters:
+        - name: include-dev
+          in: query
+          description: Include development server
+          example: false
+          schema:
+            type: boolean
+        - name: include-fallback
+          in: query
+          description: |
+            Include fallback server. If this parameter is not set or false
+            fallback server will only be listet if they are currently in use.
+          example: false
+          schema:
+            type: boolean
+        - name: exlude-full
+          in: query
+          description: |
+            Exclude full server from the output
+          example: false
+          schema:
+            type: boolean
+      description: Get the list of the current game server
+      responses:
+        200:
+          description: The list of the active server
+          content:
+            "application/json":
+              schema:
+                type: array
+                items:
+                  "$ref": '#/components/schemas/ServerInfoEx'
+  "/info/{server-id}":
+    get:
+      tags:
+        - Info
+      description: Gets the last submitted information about a single server
+      parameters:
+        - name: server-id
+          in: path
+          description: The server id that is proviced by pronto
+          schema: 
+            type: string
+          required: true
+          example: game-id
+      responses:
+        200:
+          description: Server found for the id
+          content:
+            "application/json":
+              schema:
+                "$ref": '#/components/schemas/ServerInfoEx'
+        404:
+          description: Server not found
+  "/new":
+    get:
+      tags:
+        - Client
+      description: |
+        Select an appropriate server and returns the result
+      parameters:
+        - name: game
+          in: query
+          description: Game id
+          schema: 
+            type: string
+          required: true
+          example: game-id
+        - name: developer
+          in: query
+          description: |
+            Selects if a developer server should be returned.
+            If no developer server found and fallbacks are enabled a 
+            normal one would be returned.
+          schema:
+            type: boolean
+          example: false
+        - name: fallback
+          in: query
+          description: Enable fallbacks.
+          schema: 
+            type: boolean
+          example: true
+      responses:
+        200:
+          "$ref": '#/components/responses/ClientNewSuccess'
+        404:
+          description: No game server found
+    post:
+      tags:
+        - Client
+      description: |
+        Select an appropriate server and returns the result
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              type: object
+              properties:
+                game:
+                  type: string
+                  description: Game id
+                  example: game-id
+                developer:
+                  type: boolean
+                  description: |
+                    Selects if a developer server should be returned.
+                    If no developer server found and fallbacks are enabled a 
+                    normal one would be returned.
+                  default: false
+                fallback:
+                  type: boolean
+                  description: |
+                    Enable fallbacks.
+                  default: true
+              required:
+                - game
+      responses:
+        200:
+          "$ref": '#/components/responses/ClientNewSuccess'
+        404:
+          description: No game server found
+                  
+
+

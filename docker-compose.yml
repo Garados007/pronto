@@ -1,0 +1,21 @@
+version: '3'
+services:
+    db:
+        image: postgres
+        restart: always
+        environment:
+            POSTGRES_PASSWORD: password
+            POSTGRES_DB: pronto
+    
+    pronto:
+        build: .
+        ports:
+            - 5000:5000
+        volumes:
+            - ./tokens.txt:/app/tokens.txt
+        environment:
+            RUST_LOG: rest_api=info,actix=info,pronto=info
+            HOST: 0.0.0.0
+            PORT: 5000
+            DATABASE_URL: postgres://postgres:password@db/pronto
+            TOKEN_FILE: /app/tokens.txt
