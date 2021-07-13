@@ -17,7 +17,7 @@ mod tokens;
 
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {
-    println!("init ...");
+    println!("init pronto server ...");
     dotenv::dotenv()
         .ok();
     env_logger::init();
