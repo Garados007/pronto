@@ -1,7 +1,7 @@
 openapi: '3.0.2'
 info:
   title: Pronto REST Api
-  version: '1.0'
+  version: '1.1'
   description: |
     Open Api Specification for Pronto.
 
@@ -288,6 +288,106 @@ paths:
           "$ref": '#/components/responses/ClientNewSuccess'
         404:
           description: No game server found
+  "/token":
+    post:
+      tags:
+        - Join Tokens
+      description: |
+        Creates a new fast join token that can be used for any clients in the next 15 minutes.
+      parameters:
+        - name: token
+          description: The authentification token of the game server
+          in: header
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              type: object
+              properties:
+                game:
+                  type: string
+                  description: The game id for which the token has to be created
+                lobby:
+                  type: string
+                  description: |
+                    Any arbitary information that is needed for the client to join the lobby.
+              required:
+                - game
+                - lobby
+      responses:
+        200:
+          description: Returns the created token
+          content:
+            "application/json":
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                required:
+                  - token
+        403:
+          description: Invalid or missing token
+  "/token/{token}":
+    get:
+      tags:
+        - Join Tokens
+      description: |
+        Returns the temporary stored join information that is needed for the client to find its 
+        lobby.
+      parameters:
+        - name: token
+          in: path
+          description: The provided token.
+          schema:
+            type: string
+          required: true
+          example: ABCD
+      responses:
+        200:
+          description: Join Information found for the token
+          content:
+            "application/json":
+              schema:
+                type: object
+                properties:
+                  server:
+                    type: string
+                    description: The server id
+                    example: "server-id"
+                  game:
+                    type: string
+                    description: The game id
+                    example: "game-id"
+                  lobby:
+                    type: string
+                    description: |
+                      The lobby join information. Its usage depends on the current game.
+                    example: "lobby-join-information"
+                  api-uri:
+                    type: string
+                    description: Url prefix for the pronto api
+                    example: https://game1.example.com/api/v1/
+                  game-uri:
+                    type: string
+                    description: |
+                      Url prefix for the game. \
+                      This field is null if the game type isn't listet in the last status update of
+                      the game server. This should normaly not happen and is an indicator of an 
+                      misconfigured game server.
+                    example: https://game1.example.com/game-name/api/v1/
+                required:
+                  - server
+                  - game
+                  - lobby
+                  - api-uri
                   
+        404:
+          description: Token not found or invalid
+
+
 
 

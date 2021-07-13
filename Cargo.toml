@@ -24,3 +24,4 @@ diesel_migrations = "1.4.0"
 lazy_static = "1.4.0"
 r2d2 = "0.8.9"
 uuid = { version = "0.8.2", features = [ "serde", "v4" ] }
+rand = "0.8.4"

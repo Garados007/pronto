@@ -1,5 +1,6 @@
 use std::convert::{TryFrom, TryInto};
 
+use rand::prelude::Distribution;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use crate::api_error::ApiError;
@@ -220,4 +221,106 @@ pub struct NewResponse {
     pub api_uri: String,
     #[serde(rename = "game-uri")]
     pub game_uri: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct FastTokenAddRequest {
+    pub game: String,
+    pub lobby: String,
+}
+
+const MAX_FAST_TOKEN_SIZE: usize = 4;
+
+impl TryFrom<(Uuid, FastTokenAddRequest)> for crate::db::model::FastToken {
+    type Error = ApiError;
+
+    fn try_from((server_id, value): (Uuid, FastTokenAddRequest)) -> Result<Self, Self::Error> {
+        let now = chrono::Utc::now();
+        let limit = now.checked_sub_signed(
+            chrono::Duration::minutes(20)
+        )
+            .expect("limit traveled back in time")
+            .naive_utc();
+        let range = "ABCDEFGHIJKLMOPQRSTUVWXYZ0123456789";
+        let mut rng = rand::thread_rng();
+        let dist = rand::distributions::Uniform::new(0, range.len());
+        let mut token = String::with_capacity(MAX_FAST_TOKEN_SIZE);
+        loop {
+            token.clear();
+            for _ in 0..MAX_FAST_TOKEN_SIZE {
+                token.push(range.chars().nth(dist.sample(&mut rng))
+                    .expect("random out of range")
+                );
+            }
+            if let Err(_) = crate::db::model::FastToken::find_by_token_checked(&token, limit) {
+                return crate::db::model::FastToken::create(
+                    crate::db::model::FastToken {
+                        id: Uuid::new_v4(),
+                        token,
+                        server_id,
+                        game: value.game,
+                        lobby: value.lobby,
+                        created_at: now.naive_utc(),
+                        updated_at: None,
+                    }
+                );
+            }
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct FastTokenAddResponse {
+    pub token: String,
+}
+
+impl From<crate::db::model::FastToken> for FastTokenAddResponse {
+    fn from(value: crate::db::model::FastToken) -> Self {
+        FastTokenAddResponse {
+            token: value.token,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct FastTokenFetchResponse {
+    pub server: String,
+    pub game: String,
+    pub lobby: String,
+    #[serde(rename = "api-uri")]
+    pub api_uri: String,
+    #[serde(rename = "game-uri")]
+    pub game_uri: Option<String>,
+}
+
+impl TryFrom<crate::db::model::FastToken> for FastTokenFetchResponse {
+    type Error = ApiError;
+
+    fn try_from(value: crate::db::model::FastToken) -> Result<Self, Self::Error> {
+        let server: GameServer = crate::db::model::Server::find_by_id(value.server_id)?
+            .try_into()?;
+        for game in &server.info.games {
+            if game.name == value.game {
+                return Ok(FastTokenFetchResponse {
+                    server: Uuid::to_simple(value.server_id)
+                        .encode_lower(&mut Uuid::encode_buffer())
+                        .to_string(),
+                    game: value.game,
+                    lobby: value.lobby,
+                    api_uri: server.info.uri,
+                    game_uri: Some(game.uri.clone()),
+                });
+            }
+        }
+
+        Ok(FastTokenFetchResponse {
+            server: Uuid::to_simple(value.server_id)
+                .encode_lower(&mut Uuid::encode_buffer())
+                .to_string(),
+            game: value.game,
+            lobby: value.lobby,
+            api_uri: server.info.uri,
+            game_uri: None,
+        })
+    }
 }

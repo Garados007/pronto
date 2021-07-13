@@ -1,4 +1,16 @@
 table! {
+    fast_token (id) {
+        id -> Uuid,
+        token -> Text,
+        server_id -> Uuid,
+        game -> Text,
+        lobby -> Text,
+        created_at -> Timestamp,
+        updated_at -> Nullable<Timestamp>,
+    }
+}
+
+table! {
     server (id) {
         id -> Uuid,
         last_seen -> Timestamp,
@@ -38,10 +50,12 @@ table! {
     }
 }
 
+joinable!(fast_token -> server (server_id));
 joinable!(server_game -> server_info (game_info_id));
 joinable!(server_info -> server (server_id));
 
 allow_tables_to_appear_in_same_query!(
+    fast_token,
     server,
     server_game,
     server_info,

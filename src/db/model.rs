@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use diesel::prelude::*;
 use crate::api_error::ApiError;
-use crate::schema::{server, server_game, server_info};
+use crate::schema::{server, server_game, server_info, fast_token};
 
 #[derive(Serialize, Deserialize, AsChangeset, Queryable, Insertable)]
 #[table_name = "server"]
@@ -283,6 +283,92 @@ impl ServerGame {
         let res = diesel::delete(
             server_game::table
                 .filter(server_game::game_info_id.eq(game_info_id))
+        ).execute(&conn)?;
+
+        Ok(res)
+    }
+}
+
+#[derive(Serialize, Deserialize, AsChangeset, Queryable, Insertable)]
+#[table_name = "fast_token"]
+pub struct FastToken {
+    pub id: Uuid,
+    pub token: String,
+    pub server_id: Uuid,
+    pub game: String,
+    pub lobby: String,
+    pub created_at: NaiveDateTime,
+    pub updated_at: Option<NaiveDateTime>,
+}
+
+impl FastToken {
+    pub fn find_all() -> Result<Vec<Self>, ApiError> {
+        let conn = crate::db::connection()?;
+
+        let result = fast_token::table
+            .load::<FastToken>(&conn)?;
+        
+        Ok(result)
+    }
+
+    pub fn find_by_id(id: Uuid) -> Result<Self, ApiError> {
+        let conn = crate::db::connection()?;
+
+        let result = fast_token::table
+            .filter(fast_token::id.eq(id))
+            .first(&conn)?;
+
+        Ok(result)
+    }
+    
+    pub fn find_by_token(token: &String) -> Result<Self, ApiError> {
+        let conn = crate::db::connection()?;
+        
+        let result = fast_token::table
+        .filter(fast_token::token.eq(token))
+        .first(&conn)?;
+        
+        Ok(result)
+    }
+    
+    pub fn find_by_token_checked(token: &String, limit: NaiveDateTime) -> Result<Self, ApiError> {
+        let conn = crate::db::connection()?;
+
+        let result = fast_token::table
+            .filter(fast_token::token.eq(token))
+            .filter(fast_token::created_at.gt(limit))
+            .first(&conn)?;
+
+        Ok(result)
+    }
+    
+    pub fn create(entry: Self) -> Result<Self, ApiError> {
+        let conn = crate::db::connection()?;
+
+        let result = diesel::insert_into(fast_token::table)
+            .values(entry)
+            .get_result(&conn)?;
+        
+        Ok(result)
+    }
+
+    pub fn update(entry: Self) -> Result<Self, ApiError> {
+        let conn = crate::db::connection()?;
+
+        let result = diesel::update(fast_token::table)
+            .filter(fast_token::id.eq(entry.id))
+            .set(entry)
+            .get_result(&conn)?;
+
+        Ok(result)
+    }
+
+    pub fn delete(id: Uuid) -> Result<usize, ApiError> {
+        let conn = crate::db::connection()?;
+
+        let res = diesel::delete(
+            fast_token::table
+                .filter(fast_token::id.eq(id))
         ).execute(&conn)?;
 
         Ok(res)

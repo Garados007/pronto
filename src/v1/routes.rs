@@ -246,6 +246,51 @@ async fn new_post(request: web::Json<NewRequest>) -> impl Responder {
     new(request.0).await
 }
 
+#[post("/v1/token")]
+async fn token_post(req: web::HttpRequest, request: web::Json<FastTokenAddRequest>) -> impl Responder {
+    let token = match get_header(&req, "token") {
+        Some(token) => token,
+        None => return HttpResponse::Forbidden().finish(),
+    };
+    let server = match crate::db::model::Server::find_by_token(&token.as_str()) {
+        Ok(x) => x,
+        Err(_) => return HttpResponse::Forbidden().finish(),
+    };
+    let result: Result<crate::db::model::FastToken, _> = (server.id, request.into_inner()).try_into();
+    match result {
+        Ok(res) => HttpResponse::Ok().json(Into::<FastTokenAddResponse>::into(res)),
+        Err(e) =>
+            HttpResponse::InternalServerError().json(json!({
+                "error": e,
+            })),
+    }
+}
+
+#[get("/v1/token/{token}")]
+async fn token_get(token: web::Path<String>) -> impl Responder {let now = chrono::Utc::now();
+    let limit = now.checked_sub_signed(
+        chrono::Duration::minutes(20)
+    )
+        .expect("limit traveled back in time")
+        .naive_utc();
+    let result = crate::db::model::FastToken::find_by_token_checked(
+        &token.into_inner().to_uppercase(), 
+        limit
+    );
+    match result {
+        Ok(x) => {
+            let x: Result<FastTokenFetchResponse, _> = x.try_into();
+            match x {
+                Ok(x) => HttpResponse::Ok().json(x),
+                Err(e) => HttpResponse::InternalServerError().json(json!({
+                    "error": e,
+                })),
+            }
+        },
+        Err(_) => HttpResponse::NotFound().finish(),
+    }
+}
+
 pub fn init_routes(cfg: &mut web::ServiceConfig) {
     cfg.service(redirect);
     cfg.service(index);
@@ -256,4 +301,6 @@ pub fn init_routes(cfg: &mut web::ServiceConfig) {
     cfg.service(info);
     cfg.service(new_get);
     cfg.service(new_post);
+    cfg.service(token_post);
+    cfg.service(token_get);
 }

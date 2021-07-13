@@ -1036,6 +1036,7 @@ dependencies = [
  "log",
  "mime",
  "r2d2",
+ "rand",
  "serde",
  "serde_json",
  "uuid 0.8.2",
