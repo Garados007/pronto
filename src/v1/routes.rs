@@ -155,7 +155,7 @@ async fn info(server_id: web::Path<String>) -> impl Responder {
     }
 }
 
-async fn find_server(game: &str, dev: bool, fallback: bool) -> Option<GameServer> {
+async fn find_server(game: &str, dev: bool, fallback: bool, ignore: &Vec<String>) -> Option<GameServer> {
     // search for entries
     for entry in match crate::db::model::Server
         ::find_by_filter(dev, fallback, true) 
@@ -170,6 +170,10 @@ async fn find_server(game: &str, dev: bool, fallback: bool) -> Option<GameServer
             Ok(x) => x,
             Err(_) => continue,
         };
+        // check if server is ignored
+        if let Err(_) = ignore.binary_search(&entry.id) {
+            continue;
+        }
         // check if entry flags matches filter
         if entry.info.developer != dev 
             || entry.info.fallback != fallback
@@ -196,28 +200,42 @@ async fn find_server_for_request(request: &NewRequest) -> Option<GameServer> {
     let game = request.game.as_str();
     let developer = request.developer.unwrap_or(false);
     let fallback = request.fallback.unwrap_or(true);
+    let empty = vec![];
+    let ignore = match &request.ignore {
+        Some(x) => x,
+        None => &empty,
+    };
     if developer {
-        if let Some(result) = find_server(game, true, false).await {
+        if let Some(result) = find_server(game, true, false, ignore).await {
             return Some(result);
         }
         if !fallback {
             return None;
         }
-        if let Some(result) = find_server(game, true, true).await {
+        if let Some(result) = find_server(game, true, true, ignore).await {
             return Some(result);
         }
     }
 
-    if let Some(result) = find_server(game, false, false).await {
+    if let Some(result) = find_server(game, false, false, ignore).await {
         return Some(result);
     }
     if !fallback {
         return None;
     }
-    find_server(game, false, true).await
+    find_server(game, false, true, ignore).await
 }
 
-async fn new(request: NewRequest) -> impl Responder {
+async fn new(mut request: NewRequest) -> impl Responder {
+    if let Some(mut ignore) = request.ignore {
+        ignore.sort();
+        request = NewRequest {
+            developer: request.developer,
+            fallback: request.fallback,
+            game: request.game,
+            ignore: Some(ignore),
+        };
+    }
     match find_server_for_request(&request).await {
         Some(result) => {
             let game_name = &request.game;

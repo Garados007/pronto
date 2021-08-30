@@ -212,6 +212,7 @@ pub struct NewRequest {
     pub game: String,
     pub developer: Option<bool>,
     pub fallback: Option<bool>,
+    pub ignore: Option<Vec<String>>,
 }
 
 #[derive(Serialize, Deserialize)]

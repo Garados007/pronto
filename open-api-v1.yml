@@ -1,7 +1,7 @@
 openapi: '3.0.2'
 info:
   title: Pronto REST Api
-  version: '1.1'
+  version: '1.2'
   description: |
     Open Api Specification for Pronto.
 
@@ -281,6 +281,14 @@ paths:
                   description: |
                     Enable fallbacks.
                   default: true
+                ignore:
+                  type: array
+                  description: |
+                    A list of server ids that should be ignored for the new request
+                  items:
+                    type: string
+                    description: A single server id that should be ignored.
+                    example: id-of-game-server
               required:
                 - game
       responses:
