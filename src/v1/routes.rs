@@ -178,6 +178,10 @@ async fn find_server(game: &str, dev: bool, fallback: bool) -> Option<GameServer
         {
             continue;
         }
+        // check if server is online
+        if entry.last_seen_sec >= 60.0 {
+            continue;
+        }
         // check if entry has game supported
         for game_entry in &entry.info.games {
             if game_entry.name == game {
