@@ -171,7 +171,7 @@ async fn find_server(game: &str, dev: bool, fallback: bool, ignore: &Vec<String>
             Err(_) => continue,
         };
         // check if server is ignored
-        if let Err(_) = ignore.binary_search(&entry.id) {
+        if let Ok(_) = ignore.binary_search(&entry.id) {
             continue;
         }
         // check if entry flags matches filter
