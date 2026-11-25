@@ -8,23 +8,20 @@ RUN mkdir src && \
 COPY ./Cargo.lock ./
 COPY ./Cargo.toml ./
 RUN cargo build --release && \
-    rm -rf src && \
-    rm -rf target/release/.fingerprint/pronto-* && \
-    rm -rf target/release/deps/pronto-* && \
-    rm -rf target/release/pronto*
+    cargo clean --release -p pronto && \
+    rm -rf src
 COPY ./migrations ./migrations
 COPY ./src ./src
 COPY ./diesel.toml ./
-RUN cargo build --release
+RUN touch src/main.rs && cargo build --release
 
 # Build swagger documentation
 
 FROM debian as converter
 WORKDIR /app
 RUN apt-get update && \
-    apt-get install -y jq python3-pip sed && \
-    rm -rf /var/lib/apt/lists/* && \
-    pip3 install yq
+    apt-get install -y jq yq sed && \
+    rm -rf /var/lib/apt/lists/*
 COPY ./open-api-v1.yml ./
 COPY ./resources/api-index-template.html ./
 RUN yq . ./open-api-v1.yml > ./open-api-v1.json && \
